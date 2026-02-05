@@ -191,7 +191,7 @@ def format_signal(signal):
         trend_text = "Uptrend confermato (massimi e minimi crescenti)"
         action_text = "Nuovo minimo del range toccato"
     else:
-        emoji = "🔻"
+        emoji = "📻"
         direction_emoji = "📉"
         trend_text = "Downtrend confermato (massimi e minimi decrescenti)"
         action_text = "Nuovo massimo del range toccato"
@@ -239,36 +239,28 @@ async def main():
         "📉 Cerca opportunità SHORT (vendita)"
     )
     
-    while True:
-        try:
-            print(f"\n🔍 Scansione in corso... {datetime.now().strftime('%H:%M:%S')}")
+    # Esegui UNA SOLA scansione (senza loop infinito)
+    try:
+        print(f"\n🔍 Scansione in corso... {datetime.now().strftime('%H:%M:%S')}")
+        
+        for pair in FOREX_PAIRS:
+            print(f"  Analizzando {pair}...")
             
-            for pair in FOREX_PAIRS:
-                print(f"  Analizzando {pair}...")
+            for timeframe in ['1h', '1d']:
+                signal = analyze_pair(pair, timeframe)
                 
-                for timeframe in ['1h', '1d']:
-                    signal = analyze_pair(pair, timeframe)
-                    
-                    if signal:
-                        signal_type = signal['signal']
-                        print(f"  ✅ SEGNALE {signal_type} TROVATO su {pair} ({timeframe})!")
-                        message = format_signal(signal)
-                        await send_telegram_message(bot, message)
-                        await asyncio.sleep(2)
-            
-            print(f"✅ Scansione completata. Prossima scansione tra 3 ore...")
-            await asyncio.sleep(10800)
-            
-        except KeyboardInterrupt:
-            print("\n⚠️ Bot interrotto dall'utente")
-            await send_telegram_message(bot, "⚠️ <b>Bot arrestato</b>")
-            break
-        except Exception as e:
-            print(f"❌ Errore nel loop principale: {e}")
-            await asyncio.sleep(60)
+                if signal:
+                    signal_type = signal['signal']
+                    print(f"  ✅ SEGNALE {signal_type} TROVATO su {pair} ({timeframe})!")
+                    message = format_signal(signal)
+                    await send_telegram_message(bot, message)
+                    await asyncio.sleep(2)
+        
+        print(f"✅ Scansione completata.")
+        
+    except Exception as e:
+        print(f"❌ Errore durante la scansione: {e}")
 
-# Importa Bot qui per renderlo disponibile
-from telegram import Bot
 
 if __name__ == "__main__":
     print("""
@@ -281,77 +273,7 @@ STRATEGIA COMBINATA:
 📈 LONG: Uptrend + range + supporto
 📉 SHORT: Downtrend + range + resistenza
 ⏰ Timeframes: H1 e D1
-🔄 Esecuzione tramite Web Service
+🔄 Esecuzione tramite Scheduled Task
 """)
     
     asyncio.run(main())
-```
-
-5. **"Commit changes"** → **"Commit changes"**
-
----
-
-## **PARTE 2: Deploy su Koyeb**
-
-Ora torna su **Koyeb**:
-
-### **PASSO 1: Create Service**
-
-1. **"Create Service"**
-2. **GitHub** → Seleziona `forex-bot`
-3. **Branch**: `main`
-
----
-
-### **PASSO 2: Configurazione Build**
-
-- **Builder**: `Buildpack`
-- **Build command**: (lascia vuoto, viene rilevato automaticamente)
-- **Run command**: 
-```
-python web_wrapper.py
-```
-
----
-
-### **PASSO 3: Service Type**
-
-- Seleziona **"Web Service"** ✅
-- **Port**: `8000`
-
----
-
-### **PASSO 4: Environment Variables**
-
-Aggiungi:
-```
-TELEGRAM_BOT_TOKEN = tuo_token
-TELEGRAM_CHAT_ID = tuo_id
-PORT = 8000
-```
-
----
-
-### **PASSO 5: Instance**
-
-- Seleziona **"Nano"** (gratuito)
-
----
-
-### **PASSO 6: Deploy**
-
-1. Clicca **"Deploy"**
-2. Aspetta 2-3 minuti
-3. Quando vedi **"Healthy"** → ✅ **FUNZIONA!**
-
----
-
-## **VERIFICA:**
-
-1. Vai su **Logs** in Koyeb
-2. Dovresti vedere:
-```
-🚀 Web server in ascolto sulla porta 8000
-🤖 Bot forex in esecuzione in background
-🤖 Avvio bot in background...
-🔍 Scansione in corso...
