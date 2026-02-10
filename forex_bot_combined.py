@@ -12,19 +12,19 @@ TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
 # Coppie Forex Major
 FOREX_PAIRS = [
-    "EURUSD=X",  # EUR/USD
-    "GBPUSD=X",  # GBP/USD
-    "USDJPY=X",  # USD/JPY
-    "USDCHF=X",  # USD/CHF
-    "AUDUSD=X",  # AUD/USD
-    "USDCAD=X",  # USD/CAD
-    "NZDUSD=X",  # NZD/USD
+    "EURUSD=X",
+    "GBPUSD=X",
+    "USDJPY=X",
+    "USDCHF=X",
+    "AUDUSD=X",
+    "USDCAD=X",
+    "NZDUSD=X",
 ]
 
 # Parametri strategia
-LOOKBACK_TREND = 10      # Candele per verificare trend
-LOOKBACK_RANGE = 20      # Candele per identificare range
-RANGE_TOLERANCE = 0.02   # 2% di oscillazione per definire il range
+LOOKBACK_TREND = 10
+LOOKBACK_RANGE = 20
+RANGE_TOLERANCE = 0.02
 
 # =============== FUNZIONI ANALISI LONG ===============
 
@@ -127,19 +127,16 @@ def analyze_pair(symbol, timeframe='1h'):
         if df.empty or len(df) < LOOKBACK_RANGE:
             return None
         
-        # Identifica il range
         support, resistance = identify_range(df)
         if support is None:
             return None
         
-        # Verifica se siamo in range
         in_range = is_in_range(df, support, resistance)
         if not in_range:
             return None
         
         current_price = df['Close'].iloc[-1]
         
-        # ========== ANALISI LONG ==========
         if is_uptrend(df) and touches_support(df, support):
             return {
                 'symbol': symbol,
@@ -153,7 +150,6 @@ def analyze_pair(symbol, timeframe='1h'):
                 'stop_loss': support * 0.995
             }
         
-        # ========== ANALISI SHORT ==========
         if is_downtrend(df) and touches_resistance(df, resistance):
             return {
                 'symbol': symbol,
@@ -191,7 +187,7 @@ def format_signal(signal):
         trend_text = "Uptrend confermato (massimi e minimi crescenti)"
         action_text = "Nuovo minimo del range toccato"
     else:
-        emoji = "📻"
+        emoji = "🔻"
         direction_emoji = "📉"
         trend_text = "Downtrend confermato (massimi e minimi decrescenti)"
         action_text = "Nuovo massimo del range toccato"
@@ -239,27 +235,33 @@ async def main():
         "📉 Cerca opportunità SHORT (vendita)"
     )
     
-    # Esegui UNA SOLA scansione (senza loop infinito)
-    try:
-        print(f"\n🔍 Scansione in corso... {datetime.now().strftime('%H:%M:%S')}")
-        
-        for pair in FOREX_PAIRS:
-            print(f"  Analizzando {pair}...")
+    while True:
+        try:
+            print(f"\n🔍 Scansione in corso... {datetime.now().strftime('%H:%M:%S')}")
             
-            for timeframe in ['1h', '1d']:
-                signal = analyze_pair(pair, timeframe)
+            for pair in FOREX_PAIRS:
+                print(f"  Analizzando {pair}...")
                 
-                if signal:
-                    signal_type = signal['signal']
-                    print(f"  ✅ SEGNALE {signal_type} TROVATO su {pair} ({timeframe})!")
-                    message = format_signal(signal)
-                    await send_telegram_message(bot, message)
-                    await asyncio.sleep(2)
-        
-        print(f"✅ Scansione completata.")
-        
-    except Exception as e:
-        print(f"❌ Errore durante la scansione: {e}")
+                for timeframe in ['1h', '1d']:
+                    signal = analyze_pair(pair, timeframe)
+                    
+                    if signal:
+                        signal_type = signal['signal']
+                        print(f"  ✅ SEGNALE {signal_type} TROVATO su {pair} ({timeframe})!")
+                        message = format_signal(signal)
+                        await send_telegram_message(bot, message)
+                        await asyncio.sleep(2)
+            
+            print(f"✅ Scansione completata. Prossima scansione tra 3 ore...")
+            await asyncio.sleep(10800)
+            
+        except KeyboardInterrupt:
+            print("\n⚠️ Bot interrotto dall'utente")
+            await send_telegram_message(bot, "⚠️ <b>Bot arrestato</b>")
+            break
+        except Exception as e:
+            print(f"❌ Errore nel loop principale: {e}")
+            await asyncio.sleep(60)
 
 
 if __name__ == "__main__":
@@ -273,7 +275,7 @@ STRATEGIA COMBINATA:
 📈 LONG: Uptrend + range + supporto
 📉 SHORT: Downtrend + range + resistenza
 ⏰ Timeframes: H1 e D1
-🔄 Esecuzione tramite Scheduled Task
+🔄 Scansione ogni 3 ore
 """)
     
     asyncio.run(main())
